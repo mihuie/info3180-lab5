@@ -6,8 +6,17 @@ Werkzeug Documentation:  http://werkzeug.pocoo.org/documentation/
 This file creates your application.
 """
 
+from app import db
 from app import app
-from flask import render_template, request, redirect, url_for
+
+from app import login_man
+from flask.ext.login import login_user, logout_user, current_user, login_required
+
+from flask import render_template, request, redirect, url_for, flash
+from app.models import Profiles
+from forms import CreateUserForm, LoginForm
+from flask import jsonify
+from flask import session
 
 
 ###
@@ -24,7 +33,40 @@ def home():
 def about():
     """Render the website's about page."""
     return render_template('about.html')
+  
+@login_man.user_loader
+def load_user(id):
+    return Profiles.query.get(id)
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    form = LoginForm()
+    if request.method == "POST" and form.validate():
+        db_user = Profiles.query.filter(Profiles.username == form.username.data).first()
+        if (db_user is None):
+          flash("username and password doesn't match")
+          return render_template("login.html", form=form)
+        
+        if not(db_user.password == form.password.data):
+          flash("username and password doesn't match")
+          return render_template("login.html", form=form)
+        
+        user = load_user("1")
+        login_user(user)
+        flash("Logged in successfully.")
+        return redirect(request.args.get("next") or url_for("home"))
+    return render_template("login.html", form=form)
+ 
+@app.route('/signup/', methods=['POST','GET'])
+def signup():
+    form = CreateUserForm()
+    if request.method == 'POST' and form.validate():
+        user = Profiles((form.first_name.data).title(), (form.last_name.data).title(), form.username.data, form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        return 'Thanks for registering'
+    else:
+        return render_template('signup.html', form=form)   
 
 ###
 # The functions below should be applicable to all Flask apps.
