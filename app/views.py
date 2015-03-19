@@ -38,7 +38,7 @@ def about():
 def load_user(id):
     return Profiles.query.get(id)
 
-@app.route("/login", methods=["GET", "POST"])
+@app.route("/login/", methods=["GET", "POST"])
 def login():
     form = LoginForm()
     if request.method == "POST" and form.validate():
@@ -51,9 +51,8 @@ def login():
           flash("username and password doesn't match")
           return render_template("login.html", form=form)
         
-        user = load_user("1")
+        user = load_user(db_user.id)
         login_user(user)
-        flash("Logged in successfully.")
         return redirect(request.args.get("next") or url_for("home"))
     return render_template("login.html", form=form)
  
@@ -64,9 +63,15 @@ def signup():
         user = Profiles((form.first_name.data).title(), (form.last_name.data).title(), form.username.data, form.password.data)
         db.session.add(user)
         db.session.commit()
-        return 'Thanks for registering'
+        return redirect(url_for('home'))
     else:
         return render_template('signup.html', form=form)   
+ 
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
 ###
 # The functions below should be applicable to all Flask apps.
